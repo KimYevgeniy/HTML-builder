@@ -23,8 +23,13 @@ function writeToStream(txt) {
 
 rl.question('Type your text (type "exit" to end): ', writeToStream);
 
+rl.on('SIGINT', function () {
+  rl.close();
+  writableStream.end();
+});
+
 writableStream.on('finish', () => {
-  console.log('Goodbye!');
+  console.log('\n' + 'Goodbye!');
 });
 
 writableStream.on('error', (err) => {
