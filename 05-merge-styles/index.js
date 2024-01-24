@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
 const dirPath = path.join(__dirname, 'styles');
@@ -6,35 +6,37 @@ const extension = '.css';
 const distFolderPath = path.join(__dirname, 'project-dist');
 const bundleFilePath = path.join(distFolderPath, 'bundle.css');
 
-fs.writeFileSync(bundleFilePath, '');
-
-fs.readdir(dirPath, (err, files) => {
-    if (err) {
-      console.error(`Error reading folder: ${err}`);
-      return;
-    }
-
-    files.forEach(file => {
+fs.mkdir(distFolderPath, { recursive: true })
+  .then(() => {
+    return fs.writeFile(bundleFilePath, '');
+  })
+  .then(() => {
+    return fs.readdir(dirPath);
+  })
+  .then((files) => {
+    const filePromises = files.map((file) => {
       const filePath = path.join(dirPath, file);
 
-      fs.stat(filePath, (err, stats) => {
-        if (err) {
-          console.error(`Error checking file stats: ${err}`);
-          return;
-        }
+      return fs.stat(filePath)
+        .then((stats) => {
+          if (stats.isFile() && path.extname(file) === extension) {
 
-        if (stats.isFile() && path.extname(file) === extension) {
-          fs.readFile(filePath, 'utf8', (err, data) => {
-            if (err) {
-              console.error(`Error reading file content: ${err}`);
-              return;
-            }
-
-            fs.appendFileSync(bundleFilePath, data);
-          });
-        }
-      });
+            return fs.readFile(filePath, 'utf8')
+              .then((data) => {
+                return fs.appendFile(bundleFilePath, data)
+                  .then(() => {
+                    console.log(`${file} has been added to bundle.css.`);
+                  });
+              });
+          }
+        });
     });
 
-    console.log('bundle.css created in project-dist.');
-});
+    return Promise.all(filePromises);
+  })
+  .then(() => {
+    console.log('bundle.css created in project-dist folder.');
+  })
+  .catch((err) => {
+    console.error(`Error: ${err}`);
+  });
